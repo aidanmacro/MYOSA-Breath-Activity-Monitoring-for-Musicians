@@ -1,0 +1,178 @@
+(footprint "D24V22F5"
+	(version 20241229)
+	(generator "pcbnew")
+	(generator_version "9.0")
+	(layer "F.Cu")
+	(property "Reference" "U**"
+		(at 8.25 -4 0)
+		(unlocked yes)
+		(layer "F.SilkS")
+		(uuid "5f8adadf-7019-4db4-ab20-b851263fa799")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.1)
+			)
+		)
+	)
+	(property "Value" "D24V22F5"
+		(at 7.5 -2.5 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(uuid "58bbc648-6340-476d-896f-17beb1ee78d2")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Datasheet" ""
+		(at 0 0 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "b9b83570-6324-4b5d-8adb-d0714a7652de")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Description" ""
+		(at 0 0 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "971fecc3-f140-4227-b645-5ae178ae56e3")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(attr smd)
+	(fp_rect
+		(start 0 0)
+		(end 17.8 17.8)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(fill no)
+		(layer "F.SilkS")
+		(uuid "4e52ff5d-36a4-4730-be80-d6dce67ce372")
+	)
+	(fp_rect
+		(start 0 0)
+		(end 17.8 17.8)
+		(stroke
+			(width 0.05)
+			(type solid)
+		)
+		(fill no)
+		(layer "F.CrtYd")
+		(uuid "581e0aef-59b8-4120-846d-58e5a5198593")
+	)
+	(fp_text user "D24V22F5"
+		(at 5.2 8.65 0)
+		(unlocked yes)
+		(layer "F.SilkS")
+		(uuid "80a90626-bb6e-4e1d-9b4a-c20789c3309f")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.1)
+			)
+			(justify left bottom)
+		)
+	)
+	(fp_text user "${REFERENCE}"
+		(at 7.5 -5.75 0)
+		(unlocked yes)
+		(layer "F.Fab")
+		(uuid "8549abff-b08a-4ff3-9ef3-71507dad3cb0")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(pad "" np_thru_hole circle
+		(at 2.3 2.3)
+		(size 2.18 2.18)
+		(drill 2.18)
+		(layers "*.Mask")
+		(uuid "b9563fa3-7436-4f14-ad59-02377f3311f1")
+	)
+	(pad "" np_thru_hole circle
+		(at 15.5 15.5)
+		(size 2.18 2.18)
+		(drill 2.18)
+		(layers "F&B.Cu" "*.Mask")
+		(uuid "ea98b909-4623-40ca-bf2b-891b315612bf")
+	)
+	(pad "1" thru_hole circle
+		(at 1.27 16.53)
+		(size 1.5 1.5)
+		(drill 0.8)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "bdc95881-5eda-4f76-af9c-39b5c4e84512")
+	)
+	(pad "2" thru_hole circle
+		(at 3.81 16.53)
+		(size 1.5 1.5)
+		(drill 0.8)
+		(layers "*.Cu" "*.Mask" "B.SilkS")
+		(remove_unused_layers no)
+		(uuid "67d4ba1a-3e45-408e-a149-b4b3d4852272")
+	)
+	(pad "3" thru_hole circle
+		(at 6.35 16.53)
+		(size 1.5 1.5)
+		(drill 0.8)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "70eaf889-1a97-4c43-b0f3-916e96f539a3")
+	)
+	(pad "4" thru_hole circle
+		(at 8.89 16.53)
+		(size 1.5 1.5)
+		(drill 0.8)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "b1027bfb-8538-4d7a-b3b6-36fb564de88c")
+	)
+	(pad "5" thru_hole circle
+		(at 11.43 16.53)
+		(size 1.5 1.5)
+		(drill 0.8)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "fee3412b-4ed1-4e00-9976-bcae7e6b0545")
+	)
+	(pad "6" thru_hole circle
+		(at 1.27 5.84)
+		(size 1.5 1.5)
+		(drill 0.8)
+		(layers "*.Cu" "*.Mask")
+		(remove_unused_layers no)
+		(uuid "b8f75614-a745-4a9f-82e5-a4c41d7cc913")
+	)
+	(embedded_fonts no)
+	(model "${KICAD9_3DMODEL_DIR}/Aidan_Custom.3dshapes/d24v22fx-step-down-voltage-regulator.step"
+		(offset
+			(xyz 0 -17.8 1.1)
+		)
+		(scale
+			(xyz 1 1 1)
+		)
+		(rotate
+			(xyz -0 -0 -0)
+		)
+	)
+)

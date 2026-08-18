@@ -1,0 +1,5 @@
+(sym_lib_table
+  (version 7)
+  (lib (name "MYOSA")(type "KiCad")(uri "D:/git_repos/DST5/KiCAD/external_libs/MYOSA/MYOSA.kicad_sym")(options "")(descr ""))
+  (lib (name "Aidan Custom Components")(type "KiCad")(uri "D:/git_repos/DST5/KiCAD/external_libs/pololu/symbols/Aidan Custom Components.kicad_sym")(options "")(descr ""))
+)
