@@ -9,7 +9,7 @@ import pyqtgraph as pg
 from PyQt6 import QtWidgets, QtCore
 
 PORT = "COM8"
-BAUD = 2000000
+BAUD = 115200
 EXPECTED_SAMPLES = 512
 
 ROLLING_BUFFER_SAMPLES = 8192
@@ -203,7 +203,7 @@ class ScopeWindow(QtWidgets.QWidget):
         controls.addWidget(self.export_button, 0, 1)
 
         self.trigger_checkbox = QtWidgets.QCheckBox("Trigger")
-        self.trigger_checkbox.setChecked(True)
+        self.trigger_checkbox.setChecked(False)
         self.trigger_checkbox.stateChanged.connect(
             self.update_trigger_enabled
         )
@@ -284,12 +284,12 @@ class ScopeWindow(QtWidgets.QWidget):
         controls.addWidget(self.refresh_slider, 2, 3)
 
         self.follow_checkbox = QtWidgets.QCheckBox("Follow latest")
-        self.follow_checkbox.setChecked(True)
+        self.follow_checkbox.setChecked(False)
         self.follow_checkbox.stateChanged.connect(self.update_follow_latest)
         controls.addWidget(self.follow_checkbox, 2, 4)
 
         self.smoothing_checkbox = QtWidgets.QCheckBox("Smooth waveform")
-        self.smoothing_checkbox.setChecked(True)
+        self.smoothing_checkbox.setChecked(False)
         controls.addWidget(self.smoothing_checkbox, 3, 0)
 
         self.smoothing_label = QtWidgets.QLabel(
@@ -310,7 +310,7 @@ class ScopeWindow(QtWidgets.QWidget):
         controls.addWidget(self.smoothing_slider, 3, 2, 1, 4)
 
         self.notch_checkbox = QtWidgets.QCheckBox("Notch")
-        self.notch_checkbox.setChecked(True)
+        self.notch_checkbox.setChecked(False)
         controls.addWidget(self.notch_checkbox, 4, 0)
 
         self.notch_label = QtWidgets.QLabel(
@@ -351,7 +351,7 @@ class ScopeWindow(QtWidgets.QWidget):
         controls.addWidget(self.notch_q_slider, 4, 5)
 
         self.pulse_only_checkbox = QtWidgets.QCheckBox("Pulse-only")
-        self.pulse_only_checkbox.setChecked(True)
+        self.pulse_only_checkbox.setChecked(False)
         self.pulse_only_checkbox.stateChanged.connect(
             self.update_pulse_only_mode
         )
@@ -360,7 +360,7 @@ class ScopeWindow(QtWidgets.QWidget):
         self.baseline_checkbox = QtWidgets.QCheckBox(
             "Subtract baseline"
         )
-        self.baseline_checkbox.setChecked(True)
+        self.baseline_checkbox.setChecked(False)
         controls.addWidget(self.baseline_checkbox, 5, 1)
 
         controls.addWidget(QtWidgets.QLabel("Pulse display"), 5, 2)
