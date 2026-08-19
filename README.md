@@ -1,4 +1,4 @@
-MYOSA Project Submission Guidelines (For Participants)
+<!-- MYOSA Project Submission Guidelines (For Participants)
 This document outlines the mandatory submission format and rules that all participants must strictly follow while uploading their project to the official MYOSA GitHub repository. Submissions that do not follow this format may be rejected or asked for resubmission.
 1. Submission Format (Mandatory)
 Each participant/team must upload a single Markdown (.md) file following the exact structure below:
@@ -22,7 +22,14 @@ tags:
 > One-line project tagline 
 Real-time breath monitoring, built for the way musicians breathe and perform.
 
----
+--- -->
+
+## BreathSense - MYOSA Musical Breath Activity
+
+<p align="center">
+  <img src="assets/images/myosa_breakout.jpg" width="400"><br/>
+  <i>Placeholder cover image</i>
+</p>
 
 ## Acknowledgements
 
@@ -42,14 +49,14 @@ Musicians rely heavily on breath control to shape dynamics, phrasing, tone and e
 
 ## Features (Detailed)
 
-QUICK NOTES:
+<!-- QUICK NOTES:
 - Custom NDIR CO₂ Sensing system, combining a pulsed MWIR LED and a photodiode with a peak sensitivity wavelength corresponding to the peak emitted wavelength of the LED. The CO₂ absorbs some of the emitted IR light and thus can be detected from a drop in signal  from the photodiode. 
 - BMP180 corroborates the breath detection by monitoring the pressure changes within the mouthpiece. It also monitors the temperature changes within the mouthpiece so drift can be accounted for. 
 - A real time capnogram enables the chnages in CO₂ to be plotted and monitored by the user as a proxy for the strenth and consitency of their breath. 
 - The wireless capabilites of  the MYOSA are leveraged so the data  collected can be sent over WiFi to an external device to be plotted, increasing the ease of use and portability of the device. This also enables data to be logged and stored by the user. 
 
-ACTUAL: 
-1. NDIR CO₂ Sensing
+ACTUAL:  -->
+## 1. NDIR CO₂ Sensing
   - why co2 as proxy for breath
   - MWIR wavelength used
   - pulsed LED
@@ -57,25 +64,23 @@ ACTUAL:
   - co2 absorbs part of the optical signal. 
   - Circuitry 
 
-2. Pressure and Temperature Sensing
+## 2. Pressure and Temperature Sensing
   - pressure change provides an independant measure of breath
   - temperature measurement helps mitigate environmental effects and thermal drift 
   - BMP180 from minkit connects via I2C to MYOSA board. 
 
-3. MYOSA Integration 
+## 3. MYOSA Integration 
   - Master board circuitry 
   - Reads sensors and controls the pulsing
   - Wireless streaming to external computer 
 
-4. Real-Time Visualisation
+## 4. Real-Time Visualisation
   - Python Desktop interface
   - PyQt GUI
 
-5. Potential Musical Application
+## 5. Potential Musical Application
 
 ## Usage Instructions
-
-pip install -r requirements.txt
 
 Just honk
 
@@ -87,31 +92,9 @@ Desktop Frontend: Python, PyQT
 
 ## Requirements / Installation
 
-## File Structure (Optional)
+`pip install -r requirements.txt`
 
-## License (Optional)
 
-MIT License
-
-Copyright (c) 2026 aidanmacro
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
 
 ## Contribution Notes (Optional)
 2. Image Upload Rules
@@ -244,19 +227,15 @@ List all dependencies clearly:
 pip install dependency1 dependency2 dependency3
 ```
 ---
-## File Structure (Optional)
-```
-/your-project
-  ├─ file1.py
-  ├─ folder/
-  │   └─ file2.jpg
-  └─ README.md
-```
 ---
-## License (Optional)
-State your license here if applicable.
----
-## Contribution Notes (Optional)
-Explain how people can contribute, open issues, or submit improvements.
+## License MIT License
 
+Copyright (c) 2026 aidanmacro
 
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
