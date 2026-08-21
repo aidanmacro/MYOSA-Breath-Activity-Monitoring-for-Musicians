@@ -27,7 +27,7 @@ Real-time breath monitoring, built for the way musicians breathe and perform.
 ## BreathSense - MYOSA Musical Breath Activity
 
 <p align="center">
-  <img src="assets/images/myosa_breakout.jpg" width="400"><br/>
+  <img src="/assets/images/myosa_breakout.jpg" width="400"><br/>
   <i>Placeholder cover image</i>
 </p>
 
