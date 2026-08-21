@@ -82,6 +82,12 @@ ACTUAL:  -->
   - co2 absorbs part of the optical signal. 
   - Circuitry 
 
+
+<video controls width="100%">
+  <source src="assets\images/Better_Demo_of_CO2_Detection.mp4" type="video/mp4">
+</video>
+
+
 ## 2. Pressure and Temperature Sensing
   - pressure change provides an independant measure of breath
   - temperature measurement helps mitigate environmental effects and thermal drift 
