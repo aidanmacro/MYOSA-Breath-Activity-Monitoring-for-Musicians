@@ -84,7 +84,7 @@ ACTUAL:  -->
 
 
 <video controls width="100%">
-  <source src="assets/videos/Better_Demo_of_CO2_Detection.mp4" type="video/mp4">
+  <source src="https://github.com/user-attachments/assets/b8474cf9-1ba9-4d7d-9f56-cadffa174a95" type="video/mp4">
 </video>
 
 
