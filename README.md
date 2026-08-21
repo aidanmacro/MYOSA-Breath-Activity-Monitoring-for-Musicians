@@ -27,7 +27,7 @@ Real-time breath monitoring, built for the way musicians breathe and perform.
 ## BreathSense - MYOSA Musical Breath Activity
 
 <p align="center">
-  <img src="assets/images/myosa_breakout.jpg" width="400"><br/>
+  <img src="/assets/images/myosa_breakout.jpg" width="400"><br/>
   <i>Placeholder cover image</i>
 </p>
 
@@ -41,11 +41,29 @@ Real-time breath monitoring, built for the way musicians breathe and perform.
 
 Musicians rely heavily on breath control to shape dynamics, phrasing, tone and endurance, yet there are few accessible ways to measure breathing behaviour objectively during real performance. This project develops a real-time breath monitoring system designed specifically for musicians, using exhaled CO₂, pressure and temperature data to provide direct insight into how breath is being used while playing. The system is built around the MYOSA development board, providing an IoT-capable platform for sensor integration, wireless communication and real-time data logging. A custom Non-Dispersive Infrared (NDIR) CO₂ sensing system detects exhaled breath, while pressure and temperature measurements provide complementary information about breath activity and environmental variation. By combining these sensing methods with wireless data transmission and live visualisation, the project aims to provide musicians, teachers and researchers with a practical tool for analysing breath strength, timing and consistency during practice and performance.
 
+### Key Features
+
+  -
+  -
+  -
+
+
 ## Demo / Examples
 
 ### Images
 
+<p align="center">
+  <img src="assets/images/myosa_breakout.jpg" width="400"><br/>
+  <i>Placeholder cover image</i>
+</p>
+
 ### Videos
+
+<!-- Participants must: - Upload their video as a local .mp4 file - Place it in the same folder as the markdown file
+Correct Video Format -->
+<video controls width="100%">
+  <source src="/your-video-name.mp4" type="video/mp4">
+</video>
 
 ## Features (Detailed)
 
@@ -63,6 +81,12 @@ ACTUAL:  -->
   - photodiode detection and analog front end 
   - co2 absorbs part of the optical signal. 
   - Circuitry 
+
+
+<video controls width="100%">
+  <source src="assets/videos/Better_Demo_of_CO2_Detection.mp4" type="video/mp4">
+</video>
+
 
 ## 2. Pressure and Temperature Sensing
   - pressure change provides an independant measure of breath
@@ -95,9 +119,7 @@ Desktop Frontend: Python, PyQT
 `pip install -r requirements.txt`
 
 
-
-## Contribution Notes (Optional)
-2. Image Upload Rules
+<!-- 2. Image Upload Rules
 All images must: - Be placed in the same folder as your .md file - Use JPG or PNG format only - Be properly named (no spaces)
 Correct Image Format
 <p align="center">
@@ -106,20 +128,16 @@ Correct Image Format
 </p>
 3. Video Upload Rules (Important)
 YouTube links are NOT allowed.
-Participants must: - Upload their video as a local .mp4 file - Place it in the same folder as the markdown file
-Correct Video Format
-<video controls width="100%">
-  <source src="/your-video-name.mp4" type="video/mp4">
-</video>
+
 4. Content Rules
 Each project must clearly explain: - What the project does - How it works - Who it is for - What problem it solves
 Must Include:
 ●	Proper overview
 ●	Real images & demo video
 ●	Tech stack used
-●	Working instructions
+●	Working instructions -->
 
-5. Code & Technical Content
+<!-- 5. Code & Technical Content
 Participants may include: - Python, C/C++, JavaScript, or Embedded code - Installation commands
 Correct Code Format
 print("Hello MYOSA")
@@ -132,8 +150,8 @@ myosa-demo.mp4
 myosa-dashboard.jpg
 Bad Example:
 My Project Final.md
-Demo Video.mp4
-7. Common Mistakes That Lead to Rejection
+Demo Video.mp4 -->
+<!-- 7. Common Mistakes That Lead to Rejection
 Using YouTube links instead of local videos
 Missing cover image
 Not following the fixed markdown format
@@ -164,34 +182,8 @@ tags:
   - tag3
 ---
 > A short tagline that summarizes the project in one sentence.
----
-## Acknowledgements (Optional)
-If you want to thank a community, contributors, or mention an important update, write it here.
----
-## Overview
-A clear explanation of what the project does, what problem it solves, or why it exists.
-**Key features:**
-* Feature 1  
-* Feature 2  
-* Feature 3  
-* Feature 4  
----
-## Demo / Examples
-### **Images**
-Place all images in the **same folder** as this markdown file.
-Use this format:
-<p align="center">
-  <img src="/assets/images/Your_Project_Folder /image-name.jpg" width="800"><br/>
-  <i>Short caption describing the image</i>
-</p>
-
-### **Videos**
-Place your video in the same folder and use this format:
-<video controls width="100%">
-  <source src="/video-name.mp4" type="video/mp4">
-</video>
----
-## Features (Detailed)
+--- -->
+<!-- ## Features (Detailed)
 Explain in detail how the project works.  
 Break it into clear subsections like below.
 ### **1. Feature Heading Example**
@@ -213,21 +205,7 @@ If there are scripts, use:
 # Example Python snippet
 def example():
     print("Hello World")
-```
----
-## Tech Stack
-* **Technology 1**
-* **Technology 2**
-* **Technology 3**
-* **Technology 4**
----
-## Requirements / Installation
-List all dependencies clearly:
-```bash
-pip install dependency1 dependency2 dependency3
-```
----
----
+``` -->
 ## License MIT License
 
 Copyright (c) 2026 aidanmacro
