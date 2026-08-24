@@ -1,3 +1,4 @@
 .conda
 .venv
 .vscode
+./Code/app_code/old_ver/

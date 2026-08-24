@@ -34,6 +34,7 @@ Real-time breath monitoring, built for the way musicians breathe and perform.
 ## Acknowledgements
 
 - Dr. Vincenzo Pusino
+- Ben Allen
 - University of Glasgow
 - University of Glasgow Technical Staff
 
@@ -41,9 +42,9 @@ Real-time breath monitoring, built for the way musicians breathe and perform.
 
 Musicians rely heavily on breath control to shape dynamics, phrasing, tone and endurance, yet there are few accessible ways to measure breathing behaviour objectively during real performance. This project develops a real-time breath monitoring system designed specifically for musicians, using exhaled CO₂, pressure and temperature data to provide direct insight into how breath is being used while playing. The system is built around the MYOSA development board, providing an IoT-capable platform for sensor integration, wireless communication and real-time data logging. A custom Non-Dispersive Infrared (NDIR) CO₂ sensing system detects exhaled breath, while pressure and temperature measurements provide complementary information about breath activity and environmental variation. By combining these sensing methods with wireless data transmission and live visualisation, the project aims to provide musicians, teachers and researchers with a practical tool for analysing breath strength, timing and consistency during practice and performance.
 
-### Key Features
+#### Key Features
 
-  -
+  - 
   -
   -
 
