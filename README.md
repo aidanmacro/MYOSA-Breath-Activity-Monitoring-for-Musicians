@@ -137,6 +137,7 @@ The final version of the device is envisioned to work like so:
 | CO₂ emitter | L15895-0430MA LED | Pulsed mid-wavelength infrared (MWIR) source, tuned to a CO₂ absorption band |
 | CO₂ detector | P16112-011MA photodiode | Measures transmitted IR intensity after passing through the breath sample |
 | Pressure / temperature | BMP180 (Minkit breakout) | I²C sensor providing an independent breath-pressure signal and temperature compensation |
+| Onboard display | 0.96" OLED Display (Minkit breakout) | I²C enabled, providing on device quick insights for potential offline use|
 | Mechanical | 3D-printed trombone mouthpiece | Directs exhaled breath through the sensing chamber; mounts sensor package in the airflow path (Bassed on Popular Bach 12C Design) |
 | PCB | Custom board (see `KiCAD/`) | Houses the analog front end and sensor interconnects |
 
@@ -171,6 +172,18 @@ The CO₂ channel is the most sensitive part of the hardware, since NDIR absorpt
 ```bash
 pip install -r requirements.txt
 ```
+**User Interface** run the current user interface using:
+```bash
+python3 .\Code\app_code\Breathsense_GUI.py
+```
+
+## Repository Structure
+
+| Folder | Contents |
+|---|---|
+| [`Code/`](Code) | Arduino C++ firmware for the MYOSA board (sensor reading, LED pulsing, I²C fusion, wireless streaming) and the Python/PyQt desktop visualisation app |
+| [`KiCAD/`](KiCAD) | PCB schematics and layout for the custom analog front end (NDIR CO₂ sensing circuitry) |
+| [`Mechanical/`](Mechanical) | 3D-printable mouthpiece adapter design (based on a Bach 12C mouthpiece) that houses the sensor package in the airflow path |
 
 <!-- 2. Image Upload Rules
 All images must: - Be placed in the same folder as your .md file - Use JPG or PNG format only - Be properly named (no spaces)
