@@ -44,9 +44,11 @@ Musicians rely heavily on breath control to shape dynamics, phrasing, tone and e
 
 #### Key Features
 
-  - 
-  -
-  -
+  - Custom NDIR CO₂ Sensor to allow most direct measurement. 
+  - Pressure sensor for additional cross validation data and enhanced insights. 
+  - Built on the MYOSA MCU platform, small enough to clip to a belt or pocket, streaming data live
+  - On device OLED display for seeing quick analytics 
+  - Python bassed WiFi/IoT system enabling cloud computing for in deapth real time signal processing.
 
 
 ## Demo / Examples
@@ -113,14 +115,48 @@ Just honk
 
 ## Tech Stack
 
-Hardware: 3d-printed trombone mouthpiece, BMP180 pressure/temp sensor, MYOSA MCU, L15895-0430MA LED, P16112-011MA Photodiode
-Firmware: Arduino C++ (Sensor reading, I2C fusion, serial stream)
-Desktop Frontend: Python, PyQT
+### Hardware
+
+| Component | Part | Role |
+|---|---|---|
+| MCU / wireless | MYOSA development board | Master controller — drives sensing, fuses data, streams wirelessly to host computer/Cloud |
+| CO₂ emitter | L15895-0430MA LED | Pulsed mid-wavelength infrared (MWIR) source, tuned to a CO₂ absorption band |
+| CO₂ detector | P16112-011MA photodiode | Measures transmitted IR intensity after passing through the breath sample |
+| Pressure / temperature | BMP180 (Minkit breakout) | I²C sensor providing an independent breath-pressure signal and temperature compensation |
+| Mechanical | 3D-printed trombone mouthpiece | Directs exhaled breath through the sensing chamber; mounts sensor package in the airflow path (Bassed on Popular Bach 12C Design) |
+| PCB | Custom board (see `KiCAD/`) | Houses the analog front end and sensor interconnects |
+
+#### Analog Front End
+
+The CO₂ channel is the most sensitive part of the hardware, since NDIR absorption signals are small relative to the raw photodiode output. The front end is built around a **pulsed detection scheme**:
+
+1. **LED pulsing** — the MWIR LED is driven in short pulses (rather than continuously) by the MYOSA board. Pulsing reduces average power draw and, more importantly, lets the readout distinguish the LED's signal from ambient IR and photodiode drift.
+2. **Photodiode readout** — the photodiode's current output is converted to a voltage via a transimpedance amplifier (TIA), since photodiode signals are typically too small and too high-impedance to read directly with an ADC.
+3. **Filtering** — the amplified signal is filtered to reject noise outside the LED's pulse frequency and suppress ambient light interference.
+4. **Synchronous sampling** — the MYOSA board samples the photodiode signal in sync with the LED pulse (on-pulse vs off-pulse), allowing the background/ambient signal to be subtracted from the CO₂-modulated signal. This differential approach is what makes the CO₂ absorption measurable despite a noisy optical environment.
+5. **Digitisation** — the conditioned analog signal is read via the MYOSA board's ADC and combined in firmware with the BMP180's I²C readings.
+
+### Software
+
+**Firmware — Arduino C++ (runs on MYOSA)**
+- Drives LED pulse timing and synchronises photodiode ADC sampling with each pulse
+- Polls the BMP180 over I²C for pressure and temperature
+- Fuses CO₂, pressure, and temperature readings into a single timestamped data frame
+- Streams the fused data frame wirelessly to the host computer
+
+**Desktop application — Python + PyQt**
+- Listens for the incoming data stream from the MYOSA board and parses each frame into CO₂, pressure, and temperature values
+- Does inhanced signal processing and filtering
+- Plots all three channels live using PyQt's graphing widgets, updating in real time as the musician plays
+- Buffers session data for post-session review, and (per the Usage Instructions) supports comparing breath activity against sheet music playback
+
 
 ## Requirements / Installation
 
-`pip install -r requirements.txt`
-
+**Dependencies** are listed in `requirements.txt` — install with:
+```bash
+pip install -r requirements.txt
+```
 
 <!-- 2. Image Upload Rules
 All images must: - Be placed in the same folder as your .md file - Use JPG or PNG format only - Be properly named (no spaces)
