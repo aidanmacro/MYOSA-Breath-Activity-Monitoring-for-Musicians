@@ -27,8 +27,8 @@ Real-time breath monitoring, built for the way musicians breathe and perform.
 ## BreathSense - MYOSA Musical Breath Activity
 
 <p align="center">
-  <img src="myosa_breakout.jpg" width="400"><br/>
-  <i>Placeholder cover image</i>
+  <img src="mouthpiece_completed.jpeg" width="400"><br/>
+  <i>Breathsense: a CO2 Detecting mouthpiece using MYOSA board and sensors.</i>
 </p>
 
 ## Acknowledgements
@@ -57,7 +57,7 @@ Musicians rely heavily on breath control to shape dynamics, phrasing, tone and e
 
 <p align="center">
   <img src="myosa_breakout.jpg" width="400"><br/>
-  <i>Placeholder cover image</i>
+  <i>Closeup of MYOSA breakout board.</i>
 </p>
 
 ### Videos
