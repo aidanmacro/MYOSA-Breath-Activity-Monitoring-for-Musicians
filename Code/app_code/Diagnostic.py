@@ -10,60 +10,65 @@ import numpy as np
 import pyqtgraph as pg
 from PyQt6 import QtCore, QtGui, QtWidgets
 
-# --- UDP Configuration ---
-UDP_IP = "0.0.0.0"  # Listen on all network adapters
+# ---------------------------------------------------------
+# Network & Packet Configuration
+# ---------------------------------------------------------
+# We listen on all network interfaces to catch the incoming UDP stream.
+UDP_IP = "0.0.0.0"  
 UDP_PORT = 12345
 
-# --- Packet configuration ---
+# Our hardware sends 512 samples per packet. We use a magic byte sequence 
+# to ensure we don't try to parse stray network garbage.
 EXPECTED_SAMPLES = 512
 MAGIC_BYTES = b"OCIP!CDA"
-# sequence, dropped, samples, checksum, temperature, pressure
+
+# The struct format for our packet header: 
+# sequence (I), dropped (I), samples (H), checksum (H), temp (f), pressure (f).
 HEADER_REST_FMT = "<I I H H f f"
 HEADER_REST_SIZE = struct.calcsize(HEADER_REST_FMT)
 
-# --- ADC scaling ---
+# ---------------------------------------------------------
+# Hardware Specifications & Scaling
+# ---------------------------------------------------------
 VREF = 3.3
 ADC_MAX = 4095.0
 ADC_SAMPLE_RATE_HZ = 200000
 
-# --- Rolling buffer sizes ---
+# Rolling buffers to keep the GUI from consuming infinite memory.
+# Sizes are chosen based on their respective sample rates to give us a good historical window.
 ROLLING_ADC_SAMPLES = 8192
-ROLLING_BARO_POINTS = 600     # ~10 min at 1 reading/sec
-ROLLING_LED_POINTS = 600      # ~10 min of LED on/off + photocurrent history
-ROLLING_CO2_POINTS = 4000     # ~2+ min of CO2 history at ~30 Hz
+ROLLING_BARO_POINTS = 600     # Roughly 10 minutes at 1Hz
+ROLLING_LED_POINTS = 600      
+ROLLING_CO2_POINTS = 4000     # Roughly 2 minutes of CO2 history at ~30Hz
 
-# --- 10 ms historical averaging window ---
+# We use a 10 ms window to average the LED states and smooth out high-frequency noise.
 LED_AVG_WINDOW_S = 0.10
-LED_AVG_WINDOW_SAMPLES = int(LED_AVG_WINDOW_S * ADC_SAMPLE_RATE_HZ)  # 2000 samples
+LED_AVG_WINDOW_SAMPLES = int(LED_AVG_WINDOW_S * ADC_SAMPLE_RATE_HZ)
 
-# --- TIA / analogue front-end model (see Figure 5.2 schematic) ---
-TIA_RF_OHMS = 120e3               # Rf1, transimpedance feedback resistor
-STAGE2_GAIN = 1 + (240e3 / 1e3)   # Av = 1 + Rf2/Rf3 = 241
-TOTAL_TRANSIMPEDANCE = TIA_RF_OHMS * STAGE2_GAIN  # V per A
+# Transimpedance Amplifier (TIA) model. 
+# This dictates how we convert the raw voltage back into physical current.
+TIA_RF_OHMS = 120e3               
+STAGE2_GAIN = 1 + (240e3 / 1e3)   # Av = 241
+TOTAL_TRANSIMPEDANCE = TIA_RF_OHMS * STAGE2_GAIN  
 
-# Photosensitivity temperature coefficient of the InAsSb detector
-# (~ -0.1 %/degC around the 4.3 um band, back-illuminated type, per datasheet)
+# InAsSb detector temperature compensation (approx -0.1 %/degC).
 ALPHA_PD_PER_DEGC = -0.001
 T0_REF_DEGC = 25.0
+DETECTOR_RESPONSIVITY_A_PER_W = 4.5e-3  
 
-# --- Detector responsivity, used to reverse photocurrent -> incident optical power ---
-DETECTOR_RESPONSIVITY_A_PER_W = 4.5e-3  # S = 4.5 mA/W typ. at lambda_p
-
-# --- Physical sanity clamp on photocurrent ---
-# With the M16615-style driver pushing ~400 mA pulses through the L15895 LED
-# and the P16112 detector's responsivity/geometry, a differential (on-off)
-# photocurrent above ~2 nA is not physically achievable through this optical
-# path. Anything larger is treated as a corrupted/glitched reading and is
-# dropped rather than fed into the CO2 chain.
+# Sanity check: Based on the physical geometry of our optical path and the LED's 400mA 
+# drive pulses, getting a photocurrent reading above 2 nA is physically impossible. 
+# We clamp it here to prevent glitches from blowing up our CO2 math.
 MAX_PHYSICAL_PHOTOCURRENT_NA = 2.0
 
-# --- NDIR CO2 (Beer-Lambert) calibration defaults ---
-# Engineering estimates, not a factory calibration -- calibrate against a
-# known-CO2 reference gas for accurate absolute readings.
+# ---------------------------------------------------------
+# Calibration & Breath Detection Thresholds
+# ---------------------------------------------------------
 DEFAULT_PATH_LENGTH_CM = 3
 DEFAULT_ABS_COEFF_PER_PCT_CM = 0.10
 
-# --- Breath-control status thresholds (heuristic, tune to taste) ---
+# These heuristics determine what counts as "blowing" into the trombone mouthpiece.
+# They might need tweaking depending on the specific player or physical enclosure.
 CO2_IDLE_PCT = 0.20
 CO2_SUSTAIN_MIN_PCT = 1.00
 CO2_OVERBLOW_PCT = 5.00
@@ -73,48 +78,50 @@ SLOPE_STEADY_BAND_PCT_S = 1.0
 LEAK_STD_THRESH_PCT = 0.40
 STATUS_WINDOW_S = 0.75
 
-# --- Pressure-based secondary blow detection ---
-# Blowing into the mouthpiece perturbs local pressure at the barometer much
-# faster than CO2 can build up (CO2 relies on mixing/diffusion in the bore),
-# so a pressure rise can flag "breath onset" a beat before CO2 confirms it.
-# The absolute magnitude is hardware/mounting dependent -- tune via the UI.
+# A sudden spike in pressure tells us the breath started *before* the CO2 has time 
+# to diffuse into the sensor path. It's our early warning system.
 DEFAULT_PRESSURE_BLOW_THRESHOLD_PA = 0.05
 
-# --- Shared state (guarded by `lock`) ---
+# ---------------------------------------------------------
+# Shared Global State
+# ---------------------------------------------------------
+# The lock ensures our background UDP thread and the GUI don't try to read/write 
+# these variables at the exact same millisecond.
 lock = threading.Lock()
 running = True
 
 rolling_volts = np.array([], dtype=np.float32)
 rolling_pwm = np.array([], dtype=np.uint8)
 latest_status = "Waiting..."
-packet_counter = 0   # increments on every valid packet; lets consumers detect "no new data"
+packet_counter = 0  
 
-baro_t = deque(maxlen=ROLLING_BARO_POINTS)      # wall-clock seconds
-baro_temp = deque(maxlen=ROLLING_BARO_POINTS)   # deg C
-baro_pressure = deque(maxlen=ROLLING_BARO_POINTS)  # Pa
+baro_t = deque(maxlen=ROLLING_BARO_POINTS)      
+baro_temp = deque(maxlen=ROLLING_BARO_POINTS)   
+baro_pressure = deque(maxlen=ROLLING_BARO_POINTS)  
 latest_temp = None
 latest_pressure = None
 
-# --- Shared wall-clock time-zero, used by every "Time (s)" plot (LED, ---
-# --- Photocurrent, Temperature, Pressure) so their x-axes line up and ---
-# --- can be panned/zoomed together instead of drifting apart.         ---
+# We anchor all plots to a single 'time zero' so that panning and zooming 
+# across different graphs keeps everything perfectly synced up.
 session_start_time = None
 
-
 def get_session_start_time(now):
-    """Return the shared t=0 reference, initialising it on first call."""
+    """Fetches the shared t=0 reference, creating it if this is the first data point."""
     global session_start_time
     with lock:
         if session_start_time is None:
             session_start_time = now
         return session_start_time
 
-
 def checksum_u16(adc_u16):
+    """Simple 16-bit summation checksum to catch corrupt packets."""
     return int(np.sum(adc_u16, dtype=np.uint32) & 0xFFFF)
 
-
 def udp_thread():
+    """
+    Background worker that constantly listens for UDP packets, validates them,
+    and safely pushes the data into our rolling buffers.
+    """
     global rolling_volts, rolling_pwm, latest_status
     global latest_temp, latest_pressure, packet_counter
 
@@ -133,10 +140,8 @@ def udp_thread():
             except OSError:
                 break
 
-            if len(data) != expected_size:
-                continue
-
-            if data[:len(MAGIC_BYTES)] != MAGIC_BYTES:
+            # Drop packets that don't match our exact expected size or magic header.
+            if len(data) != expected_size or data[:len(MAGIC_BYTES)] != MAGIC_BYTES:
                 continue
 
             packet_start = len(MAGIC_BYTES)
@@ -153,23 +158,26 @@ def udp_thread():
             if checksum_u16(adc_u16) != checksum:
                 continue
 
+            # Extract the PWM state (bit 15) and the actual 12-bit ADC value.
             pwm_state = ((adc_u16 >> 15) & 0x1).astype(np.uint8)
             adc_u16 = adc_u16 & 0x0FFF
             volts = adc_u16.astype(np.float32) * (VREF / ADC_MAX)
 
-            status = f"min={volts.min():.3f} V | max={volts.max():.3f} V | Dropped={_dropped}"
             now = time.time()
             t0 = get_session_start_time(now)
-
+            
+            # Safely update the globals so the GUI can pick them up on its next tick.
             with lock:
                 rolling_volts = np.concatenate((rolling_volts, volts))
                 rolling_pwm = np.concatenate((rolling_pwm, pwm_state))
+                
+                # Keep the high-speed buffers from growing indefinitely
                 if len(rolling_volts) > ROLLING_ADC_SAMPLES:
                     rolling_volts = rolling_volts[-ROLLING_ADC_SAMPLES:]
                     rolling_pwm = rolling_pwm[-ROLLING_ADC_SAMPLES:]
 
-                latest_status = status
-
+                latest_status = f"min={volts.min():.3f} V | max={volts.max():.3f} V | Dropped={_dropped}"
+                
                 baro_t.append(now - t0)
                 baro_temp.append(float(temperature))
                 baro_pressure.append(float(pressure))
@@ -180,13 +188,10 @@ def udp_thread():
     finally:
         sock.close()
 
-
 def find_trigger_window(signal, trace_length, level, edge, pretrigger_frac=0.25):
     """
-    Scan `signal` for the most recent level-crossing that still leaves a full
-    `trace_length` window available (with `pretrigger_frac` of it before the
-    trigger point), mimicking a real oscilloscope's trigger + pre-trigger view.
-    Returns (start, end, trigger_index) or None if no valid crossing is found.
+    Acts like a real hardware oscilloscope trigger. We scan backwards to find the 
+    most recent edge crossing so the plot stays stable on screen.
     """
     n = len(signal)
     if n < 2 or trace_length < 2:
@@ -196,7 +201,7 @@ def find_trigger_window(signal, trace_length, level, edge, pretrigger_frac=0.25)
 
     if edge == "Rising":
         idxs = np.where((signal[:-1] < level) & (signal[1:] >= level))[0] + 1
-    else:  # "Falling"
+    else:  
         idxs = np.where((signal[:-1] >= level) & (signal[1:] < level))[0] + 1
 
     for idx in idxs[::-1]:
@@ -207,8 +212,9 @@ def find_trigger_window(signal, trace_length, level, edge, pretrigger_frac=0.25)
 
     return None
 
-
 class ScopeWindow(QtWidgets.QWidget):
+    """The main GUI application for visualizing sensor data and inferring breath states."""
+    
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Trombone Mouthpiece CO2 / Breath Monitor")
@@ -221,26 +227,23 @@ class ScopeWindow(QtWidgets.QWidget):
         self.last_plot_y = np.array([], dtype=np.float32)
         self.last_plot_pwm = np.array([], dtype=np.uint8)
 
-        # --- Trigger state ---
+        # Trigger state defaults
         self.trigger_enabled = False
         self.trigger_source = "PWM State"
         self.trigger_edge = "Rising"
         self.trigger_level = VREF / 2.0
         self.trigger_pretrigger_frac = 0.25
 
-        # --- LED on/off average + photocurrent history ---
-        # Note: no separate led_start_time -- uses the shared session_start_time
-        # (via get_session_start_time) so this lines up with the Temp/Pressure
-        # plots' time axis and the two can be scrolled/zoomed in sync.
-        self.last_seen_packet_count = -1  # forces has_new_packet True on first tick
+        # Optical history tracking
+        self.last_seen_packet_count = -1  
         self.led_t = deque(maxlen=ROLLING_LED_POINTS)
         self.led_on_v = deque(maxlen=ROLLING_LED_POINTS)
         self.led_off_v = deque(maxlen=ROLLING_LED_POINTS)
-        self.photocurrent_na = deque(maxlen=ROLLING_LED_POINTS)  # temp-compensated, clamp-filtered
+        self.photocurrent_na = deque(maxlen=ROLLING_LED_POINTS)  
 
         self.power_smooth_window = deque(maxlen=5)
 
-        # --- CO2 / baseline state ---
+        # Baseline and CO2 tracking
         self.baseline_power_uw = None
         self.baseline_pressure_pa = None
         self.co2_path_length_cm = DEFAULT_PATH_LENGTH_CM
@@ -249,46 +252,40 @@ class ScopeWindow(QtWidgets.QWidget):
         self.co2_t = deque(maxlen=ROLLING_CO2_POINTS)
         self.co2_pct = deque(maxlen=ROLLING_CO2_POINTS)
 
-        # --- Pressure-based secondary blow detection ---
         self.pressure_blow_threshold_pa = DEFAULT_PRESSURE_BLOW_THRESHOLD_PA
         self.pressure_invert = False
 
-        # =========================================================
-        # Root layout: two columns. LEFT = main CO2 display,
-        # RIGHT = diagnostic scope traces (larger/more visible).
-        # =========================================================
-        root = QtWidgets.QHBoxLayout(self)
+        self._setup_ui()
 
+        # The timer acts as our main loop, pulling data roughly at 30 FPS.
+        self.timer = QtCore.QTimer()
+        self.timer.timeout.connect(self.update_plot)
+        self.timer.start(33)
+
+    def _setup_ui(self):
+        """Builds out the layout: main CO2 focus on the left, diagnostics on the right."""
+        root = QtWidgets.QHBoxLayout(self)
         left_col = QtWidgets.QVBoxLayout()
         right_col = QtWidgets.QVBoxLayout()
         root.addLayout(left_col, stretch=6)
         root.addLayout(right_col, stretch=5)
 
-        # =========================================================
-        # LEFT COLUMN: CO2 digital readout + breath status + big plot
-        # =========================================================
+        # --- LEFT COLUMN: Primary Data ---
         co2_group = QtWidgets.QGroupBox("CO2 Monitor (NDIR, 4.26 \u00b5m band)")
         co2_layout = QtWidgets.QVBoxLayout(co2_group)
-
         top_row = QtWidgets.QHBoxLayout()
 
         self.co2_digital_label = QtWidgets.QLabel("--.-- %")
-        digital_font = QtGui.QFont("Consolas", 48, QtGui.QFont.Weight.Bold)
-        self.co2_digital_label.setFont(digital_font)
-        self.co2_digital_label.setStyleSheet(
-            "background-color: black; color: #33ff33; padding: 8px; border-radius: 6px;"
-        )
+        self.co2_digital_label.setFont(QtGui.QFont("Consolas", 48, QtGui.QFont.Weight.Bold))
+        self.co2_digital_label.setStyleSheet("background-color: black; color: #33ff33; padding: 8px; border-radius: 6px;")
         self.co2_digital_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         self.co2_digital_label.setMinimumWidth(260)
         top_row.addWidget(self.co2_digital_label)
 
         status_col = QtWidgets.QVBoxLayout()
         self.breath_status_label = QtWidgets.QLabel("No Baseline / Awaiting Capture")
-        status_font = QtGui.QFont("Arial", 16, QtGui.QFont.Weight.Bold)
-        self.breath_status_label.setFont(status_font)
-        self.breath_status_label.setStyleSheet(
-            "background-color: #444444; color: white; padding: 6px; border-radius: 6px;"
-        )
+        self.breath_status_label.setFont(QtGui.QFont("Arial", 16, QtGui.QFont.Weight.Bold))
+        self.breath_status_label.setStyleSheet("background-color: #444444; color: white; padding: 6px; border-radius: 6px;")
         self.breath_status_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         status_col.addWidget(self.breath_status_label)
 
@@ -305,27 +302,19 @@ class ScopeWindow(QtWidgets.QWidget):
         baseline_row.addStretch(1)
         status_col.addLayout(baseline_row)
 
+        # Calibration controls
         calib_row1 = QtWidgets.QHBoxLayout()
         calib_row1.addWidget(QtWidgets.QLabel("Path length (cm)"))
         self.path_length_spin = QtWidgets.QDoubleSpinBox()
         self.path_length_spin.setRange(0.1, 20.0)
-        self.path_length_spin.setSingleStep(0.1)
         self.path_length_spin.setValue(self.co2_path_length_cm)
-        self.path_length_spin.setToolTip(
-            "LED-to-detector separation across the mouthpiece bore."
-        )
         self.path_length_spin.valueChanged.connect(self.update_path_length)
         calib_row1.addWidget(self.path_length_spin)
 
         calib_row1.addWidget(QtWidgets.QLabel("Abs. coeff (per %CO2\u00b7cm)"))
         self.abs_coeff_spin = QtWidgets.QDoubleSpinBox()
         self.abs_coeff_spin.setRange(0.01, 10.0)
-        self.abs_coeff_spin.setSingleStep(0.05)
         self.abs_coeff_spin.setValue(self.co2_abs_coeff)
-        self.abs_coeff_spin.setToolTip(
-            "Beer-Lambert absorption coefficient at 4.26 um. Calibrate against "
-            "a known CO2 reference gas for accurate readings."
-        )
         self.abs_coeff_spin.valueChanged.connect(self.update_abs_coeff)
         calib_row1.addWidget(self.abs_coeff_spin)
         calib_row1.addStretch(1)
@@ -335,20 +324,11 @@ class ScopeWindow(QtWidgets.QWidget):
         calib_row2.addWidget(QtWidgets.QLabel("Pressure blow thresh. (Pa)"))
         self.pressure_thresh_spin = QtWidgets.QDoubleSpinBox()
         self.pressure_thresh_spin.setRange(0.1, 200.0)
-        self.pressure_thresh_spin.setSingleStep(0.5)
         self.pressure_thresh_spin.setValue(self.pressure_blow_threshold_pa)
-        self.pressure_thresh_spin.setToolTip(
-            "Pressure rise above the captured baseline that counts as 'blowing'. "
-            "Hardware/mounting dependent -- tune to your enclosure."
-        )
         self.pressure_thresh_spin.valueChanged.connect(self.update_pressure_threshold)
         calib_row2.addWidget(self.pressure_thresh_spin)
 
         self.pressure_invert_checkbox = QtWidgets.QCheckBox("Invert sign")
-        self.pressure_invert_checkbox.setToolTip(
-            "Enable if your barometer reads a pressure DROP when you blow "
-            "(depends on sensor placement/mounting)."
-        )
         self.pressure_invert_checkbox.stateChanged.connect(self.update_pressure_invert)
         calib_row2.addWidget(self.pressure_invert_checkbox)
         calib_row2.addStretch(1)
@@ -357,19 +337,16 @@ class ScopeWindow(QtWidgets.QWidget):
         top_row.addLayout(status_col, stretch=1)
         co2_layout.addLayout(top_row)
 
+        # CO2 Graph
         self.co2_plot_widget = pg.PlotWidget(title="CO2 % vs Time (since baseline capture)")
         self.co2_plot_widget.setLabel("bottom", "Time", units="s")
         self.co2_plot_widget.setLabel("left", "CO2", units="%")
         self.co2_plot_widget.showGrid(x=True, y=True)
         self.co2_curve = self.co2_plot_widget.plot(pen=pg.mkPen(width=2, color="#33ff33"))
-        self.co2_idle_line = pg.InfiniteLine(
-            pos=CO2_IDLE_PCT, angle=0,
-            pen=pg.mkPen(color="#888888", width=1, style=QtCore.Qt.PenStyle.DashLine),
-        )
-        self.co2_sustain_line = pg.InfiniteLine(
-            pos=CO2_SUSTAIN_MIN_PCT, angle=0,
-            pen=pg.mkPen(color="#3399ff", width=1, style=QtCore.Qt.PenStyle.DashLine),
-        )
+        
+        # Guide lines for breath statuses
+        self.co2_idle_line = pg.InfiniteLine(pos=CO2_IDLE_PCT, angle=0, pen=pg.mkPen(color="#888888", width=1, style=QtCore.Qt.PenStyle.DashLine))
+        self.co2_sustain_line = pg.InfiniteLine(pos=CO2_SUSTAIN_MIN_PCT, angle=0, pen=pg.mkPen(color="#3399ff", width=1, style=QtCore.Qt.PenStyle.DashLine))
         self.co2_plot_widget.addItem(self.co2_idle_line)
         self.co2_plot_widget.addItem(self.co2_sustain_line)
         self.co2_plot_widget.setMinimumHeight(420)
@@ -377,12 +354,10 @@ class ScopeWindow(QtWidgets.QWidget):
 
         left_col.addWidget(co2_group, stretch=1)
 
-        # =========================================================
-        # RIGHT COLUMN: diagnostic scope traces, stacked vertically
-        # so each one gets full column width and is easy to read.
-        # =========================================================
+        # --- RIGHT COLUMN: Diagnostic Scopes ---
         self.plot_widget = pg.GraphicsLayoutWidget()
 
+        # 1. Raw ADC
         self.adc_plot = self.plot_widget.addPlot(row=0, col=0, title="Waiting for data...")
         self.adc_plot.setLabel("bottom", "Sample (rel. trigger)")
         self.adc_plot.setLabel("left", "Voltage", units="V")
@@ -390,21 +365,15 @@ class ScopeWindow(QtWidgets.QWidget):
         self.adc_plot.showGrid(x=True, y=True)
         self.adc_curve = self.adc_plot.plot(pen=pg.mkPen(width=1))
 
-        self.trigger_level_line = pg.InfiniteLine(
-            pos=self.trigger_level, angle=0,
-            pen=pg.mkPen(color="g", width=1, style=QtCore.Qt.PenStyle.DashLine),
-            movable=False,
-        )
+        self.trigger_level_line = pg.InfiniteLine(pos=self.trigger_level, angle=0, pen=pg.mkPen(color="g", width=1, style=QtCore.Qt.PenStyle.DashLine), movable=False)
         self.adc_plot.addItem(self.trigger_level_line)
         self.trigger_level_line.setVisible(False)
 
-        self.trigger_point_line = pg.InfiniteLine(
-            pos=0, angle=90,
-            pen=pg.mkPen(color="g", width=1, style=QtCore.Qt.PenStyle.DashLine),
-        )
+        self.trigger_point_line = pg.InfiniteLine(pos=0, angle=90, pen=pg.mkPen(color="g", width=1, style=QtCore.Qt.PenStyle.DashLine))
         self.adc_plot.addItem(self.trigger_point_line)
         self.trigger_point_line.setVisible(False)
 
+        # 2. PWM Pin State
         self.pwm_plot = self.plot_widget.addPlot(row=1, col=0, title="PWM Pin State")
         self.pwm_plot.setLabel("bottom", "Sample (rel. trigger)")
         self.pwm_plot.setLabel("left", "State")
@@ -414,6 +383,7 @@ class ScopeWindow(QtWidgets.QWidget):
         self.pwm_plot.setXLink(self.adc_plot.getViewBox())
         self.pwm_curve = self.pwm_plot.plot(pen=pg.mkPen(width=2, color="y"), stepMode="right")
 
+        # 3. LED Voltage Avg
         self.led_plot = self.plot_widget.addPlot(row=2, col=0, title="LED On/Off Photodiode Voltage (10 ms avg)")
         self.led_plot.setLabel("bottom", "Time", units="s")
         self.led_plot.setLabel("left", "Voltage", units="V")
@@ -422,6 +392,7 @@ class ScopeWindow(QtWidgets.QWidget):
         self.led_off_curve = self.led_plot.plot(pen=pg.mkPen(width=2, color="w"), name="LED Off")
         self.led_plot.addLegend()
 
+        # 4. Photocurrent
         self.photocurrent_plot = self.plot_widget.addPlot(row=3, col=0, title="Photocurrent (clamped to \u00b12 nA)")
         self.photocurrent_plot.setLabel("bottom", "Time", units="s")
         self.photocurrent_plot.setLabel("left", "Photocurrent", units="nA")
@@ -429,6 +400,7 @@ class ScopeWindow(QtWidgets.QWidget):
         self.photocurrent_plot.setXLink(self.led_plot.getViewBox())
         self.photocurrent_curve = self.photocurrent_plot.plot(pen=pg.mkPen(width=2, color="g"))
 
+        # 5. Temperature
         self.temp_plot = self.plot_widget.addPlot(row=4, col=0, title="Temperature")
         self.temp_plot.setXLink(self.led_plot.getViewBox())
         self.temp_plot.setLabel("bottom", "Time", units="s")
@@ -436,26 +408,29 @@ class ScopeWindow(QtWidgets.QWidget):
         self.temp_plot.showGrid(x=True, y=True)
         self.temp_curve = self.temp_plot.plot(pen=pg.mkPen(width=2, color="r"), symbol="o", symbolSize=4)
 
+        # 6. Pressure
         self.pressure_plot = self.plot_widget.addPlot(row=5, col=0, title="Pressure (with blow-detect baseline)")
         self.pressure_plot.setLabel("bottom", "Time", units="s")
         self.pressure_plot.setLabel("left", "Pressure", units="Pa")
         self.pressure_plot.showGrid(x=True, y=True)
         self.pressure_plot.setXLink(self.temp_plot.getViewBox())
         self.pressure_curve = self.pressure_plot.plot(pen=pg.mkPen(width=2, color="c"), symbol="o", symbolSize=4)
-        self.pressure_baseline_line = pg.InfiniteLine(
-            pos=0, angle=0,
-            pen=pg.mkPen(color="#888888", width=1, style=QtCore.Qt.PenStyle.DashLine),
-        )
+        
+        self.pressure_baseline_line = pg.InfiniteLine(pos=0, angle=0, pen=pg.mkPen(color="#888888", width=1, style=QtCore.Qt.PenStyle.DashLine))
         self.pressure_plot.addItem(self.pressure_baseline_line)
         self.pressure_baseline_line.setVisible(False)
 
-        # Give every diagnostic trace equal, generous vertical room.
+        # Stretch equally
         for r in range(6):
             self.plot_widget.ci.layout.setRowStretchFactor(r, 1)
 
         right_col.addWidget(self.plot_widget, stretch=1)
 
-        # --- Controls (right column): pause / export / follow / trace length ---
+        # Setup interaction controls
+        self._setup_controls(right_col)
+
+    def _setup_controls(self, layout):
+        """Adds buttons and sliders for managing trace captures."""
         controls = QtWidgets.QGridLayout()
 
         self.pause_button = QtWidgets.QPushButton("Pause")
@@ -489,9 +464,9 @@ class ScopeWindow(QtWidgets.QWidget):
         self.led_status_label = QtWidgets.QLabel("LED On: n/a | LED Off: n/a | Photocurrent: n/a")
         controls.addWidget(self.led_status_label, 3, 0, 1, 4)
 
-        right_col.addLayout(controls)
+        layout.addLayout(controls)
 
-        # --- Trigger controls ---
+        # Trigger settings
         trigger_box = QtWidgets.QGroupBox("Trigger")
         trigger_layout = QtWidgets.QGridLayout(trigger_box)
 
@@ -520,13 +495,9 @@ class ScopeWindow(QtWidgets.QWidget):
         self.trigger_level_spin.valueChanged.connect(self.update_trigger_level)
         trigger_layout.addWidget(self.trigger_level_spin, 1, 3)
 
-        right_col.addWidget(trigger_box)
+        layout.addWidget(trigger_box)
 
-        self.timer = QtCore.QTimer()
-        self.timer.timeout.connect(self.update_plot)
-        self.timer.start(33)
-
-    # --- UI callbacks: scope controls ---
+    # --- UI Callbacks ---
     def toggle_pause(self):
         self.paused = not self.paused
         self.pause_button.setText("Run" if self.paused else "Pause")
@@ -535,9 +506,8 @@ class ScopeWindow(QtWidgets.QWidget):
         self.follow_latest = state == QtCore.Qt.CheckState.Checked.value
 
     def update_trace_length(self, value):
-        value = max(64, int(value))
-        self.trace_length = value
-        self.trace_label.setText(f"{value}")
+        self.trace_length = max(64, int(value))
+        self.trace_label.setText(f"{self.trace_length}")
 
     def update_trigger_enabled(self, state):
         self.trigger_enabled = state == QtCore.Qt.CheckState.Checked.value
@@ -546,7 +516,7 @@ class ScopeWindow(QtWidgets.QWidget):
 
     def update_trigger_source(self, text):
         self.trigger_source = text
-        is_adc = text == "ADC Voltage"
+        is_adc = (text == "ADC Voltage")
         self.trigger_level_spin.setEnabled(is_adc)
         self.trigger_level_line.setVisible(self.trigger_enabled and is_adc)
 
@@ -557,7 +527,6 @@ class ScopeWindow(QtWidgets.QWidget):
         self.trigger_level = float(value)
         self.trigger_level_line.setPos(self.trigger_level)
 
-    # --- UI callbacks: CO2 calibration / baseline / pressure ---
     def update_path_length(self, value):
         self.co2_path_length_cm = float(value)
 
@@ -571,15 +540,15 @@ class ScopeWindow(QtWidgets.QWidget):
         self.pressure_invert = state == QtCore.Qt.CheckState.Checked.value
 
     def capture_baseline(self):
+        """Records ambient conditions so we can calculate relative CO2 and pressure spikes."""
         if not self.power_smooth_window:
             QtWidgets.QMessageBox.warning(
                 self, "Capture Baseline",
-                "No photocurrent data yet -- wait for the LED/detector to start streaming."
+                "No photocurrent data yet. Wait for the sensor to stream."
             )
             return
 
         self.baseline_power_uw = float(np.mean(self.power_smooth_window))
-
         with lock:
             p_now = latest_pressure
 
@@ -593,14 +562,14 @@ class ScopeWindow(QtWidgets.QWidget):
         self.pressure_baseline_line.setPos(0)
         self.pressure_baseline_line.setVisible(True)
 
-        # Zero the CO2 timeline/history so the main display starts fresh
-        # relative to this new reference.
+        # Reset main CO2 display relative to this new snapshot
         self.co2_start_time = time.time()
         self.co2_t.clear()
         self.co2_pct.clear()
         self.co2_curve.setData([], [])
 
     def export_csv(self):
+        """Dumps all captured buffers to CSV for offline analysis."""
         if not self.paused:
             QtWidgets.QMessageBox.warning(self, "Export CSV", "Pause the trace before exporting.")
             return
@@ -611,21 +580,18 @@ class ScopeWindow(QtWidgets.QWidget):
 
         base = path[:-4] if path.lower().endswith(".csv") else path
 
+        # Export ADC
         if len(self.last_plot_x) and len(self.last_plot_y):
             with open(base + "_adc.csv", "w", newline="") as f:
                 writer = csv.writer(f)
                 writer.writerow(["sample", "time_s", "voltage_v", "pwm_state"])
                 for i, (sample, voltage) in enumerate(zip(self.last_plot_x, self.last_plot_y)):
                     pwm_val = int(self.last_plot_pwm[i]) if i < len(self.last_plot_pwm) else ""
-                    writer.writerow([
-                        int(sample), float(sample) / float(ADC_SAMPLE_RATE_HZ), float(voltage), pwm_val,
-                    ])
+                    writer.writerow([int(sample), float(sample) / ADC_SAMPLE_RATE_HZ, float(voltage), pwm_val])
 
+        # Export Barometric Data
         with lock:
-            t = list(baro_t)
-            temp = list(baro_temp)
-            pressure = list(baro_pressure)
-
+            t, temp, pressure = list(baro_t), list(baro_temp), list(baro_pressure)
         if t:
             with open(base + "_baro.csv", "w", newline="") as f:
                 writer = csv.writer(f)
@@ -633,6 +599,7 @@ class ScopeWindow(QtWidgets.QWidget):
                 for ti, tempi, pi in zip(t, temp, pressure):
                     writer.writerow([ti, tempi, pi])
 
+        # Export Optical Data
         if self.led_t:
             with open(base + "_photocurrent.csv", "w", newline="") as f:
                 writer = csv.writer(f)
@@ -640,6 +607,7 @@ class ScopeWindow(QtWidgets.QWidget):
                 for ti, von, voff, ipd in zip(self.led_t, self.led_on_v, self.led_off_v, self.photocurrent_na):
                     writer.writerow([ti, von, voff, ipd])
 
+        # Export CO2 Data
         if self.co2_t:
             with open(base + "_co2.csv", "w", newline="") as f:
                 writer = csv.writer(f)
@@ -647,9 +615,9 @@ class ScopeWindow(QtWidgets.QWidget):
                 for ti, c in zip(self.co2_t, self.co2_pct):
                     writer.writerow([ti, c])
 
-    # --- LED on/off averaging + photocurrent + optical power + CO2 ---
+    # --- Calculation Helpers ---
     def compute_led_averages(self, volts_full, pwm_full):
-        """10 ms rolling average of ADC voltage, split by PWM (LED) state."""
+        """Splits the ADC buffer by LED state to find the on/off averages."""
         if len(volts_full) == 0:
             return None, None
 
@@ -666,18 +634,14 @@ class ScopeWindow(QtWidgets.QWidget):
 
     def compute_photocurrent_na(self, led_on_avg, led_off_avg, temperature_c):
         """
-        Photocurrent from the TIA + 2nd stage gain. The LED-off sample serves
-        as the instantaneous baseline (cancels Vref/offset/bias-current
-        drift), then the result is temperature-compensated back to a
-        25 degC-equivalent reading. Finally, any reading exceeding what's
-        physically achievable through this LED/detector pair is rejected
-        (returns None) rather than corrupting the CO2 chain.
+        Subtracts the LED-off baseline from the LED-on signal to cancel out ambient 
+        noise, converts via TIA gain, and normalizes for temperature.
         """
         if led_on_avg is None or led_off_avg is None:
             return None
 
         delta_v = led_on_avg - led_off_avg
-        i_pd_raw = delta_v / TOTAL_TRANSIMPEDANCE  # amps
+        i_pd_raw = delta_v / TOTAL_TRANSIMPEDANCE 
 
         if temperature_c is not None:
             denom = 1.0 + ALPHA_PD_PER_DEGC * (temperature_c - T0_REF_DEGC)
@@ -687,26 +651,21 @@ class ScopeWindow(QtWidgets.QWidget):
         i_pd_na = i_pd_raw * 1e9
 
         if abs(i_pd_na) > MAX_PHYSICAL_PHOTOCURRENT_NA:
-            return None  # physically impossible given LED drive current -- discard
+            return None  # Discard if it violates hardware physics
 
         return i_pd_na
 
     def photocurrent_to_optical_power_uw(self, i_pd_na):
-        """Reverse the detector responsivity S = I_pd / P_incident."""
+        """Converts expected photocurrent back into raw incident optical power."""
         if i_pd_na is None:
             return None
         i_pd_a = i_pd_na * 1e-9
         p_w = i_pd_a / DETECTOR_RESPONSIVITY_A_PER_W
-        return p_w * 1e6  # microwatts
+        return p_w * 1e6
 
     def compute_co2_percent(self, p_measured_uw):
-        """
-        Beer-Lambert: T = P/P0, A = -ln(T), CO2% = A / (abs_coeff * path_length).
-        P0 (baseline) is captured on ambient air.
-        """
-        if p_measured_uw is None or self.baseline_power_uw is None:
-            return None
-        if p_measured_uw <= 0 or self.baseline_power_uw <= 0:
+        """Applies the Beer-Lambert law using the captured baseline."""
+        if not p_measured_uw or not self.baseline_power_uw or p_measured_uw <= 0 or self.baseline_power_uw <= 0:
             return None
 
         transmittance = p_measured_uw / self.baseline_power_uw
@@ -718,57 +677,39 @@ class ScopeWindow(QtWidgets.QWidget):
         if denom == 0:
             return None
 
-        co2_pct = absorbance / denom
-        return max(float(co2_pct), 0.0)
+        return max(float(absorbance / denom), 0.0)
 
     def compute_slope_and_std(self, window_s=STATUS_WINDOW_S):
-        """Linear-fit slope (%/s) and std-dev of CO2% over the recent window."""
+        """Provides a quick linear fit to gauge if CO2 is rising or stable."""
         if len(self.co2_t) < 3:
             return 0.0, 0.0
 
         t_arr = np.array(self.co2_t)
         v_arr = np.array(self.co2_pct)
-        t_now = t_arr[-1]
-        mask = t_arr >= (t_now - window_s)
+        mask = t_arr >= (t_arr[-1] - window_s)
+        
         if mask.sum() < 3:
             mask = np.ones_like(t_arr, dtype=bool)
 
-        t_win = t_arr[mask]
-        v_win = v_arr[mask]
-
-        if t_win[-1] == t_win[0]:
-            slope = 0.0
-        else:
-            slope = float(np.polyfit(t_win, v_win, 1)[0])
-
-        std = float(np.std(v_win))
-        return slope, std
+        t_win, v_win = t_arr[mask], v_arr[mask]
+        slope = 0.0 if t_win[-1] == t_win[0] else float(np.polyfit(t_win, v_win, 1)[0])
+        return slope, float(np.std(v_win))
 
     def get_pressure_delta_pa(self):
-        """Pressure rise above the captured air baseline (sign per Invert checkbox)."""
+        """Calculates current pressure offset from baseline."""
         if self.baseline_pressure_pa is None:
             return None
-
         with lock:
             p_now = latest_pressure
-
         if p_now is None:
             return None
-
+        
         delta = float(p_now) - self.baseline_pressure_pa
         return -delta if self.pressure_invert else delta
 
     def classify_breath_status(self, co2_pct, slope, std_dev, pressure_delta):
-        """
-        Heuristic breath-control classifier for a trombone mouthpiece.
-        Primary evidence is CO2 level/slope/stability; pressure is used as a
-        faster-responding secondary signal to confirm or lead the CO2 read
-        (pressure reacts to airflow essentially instantly, CO2 lags behind
-        mixing/diffusion in the bore).
-        """
-        pressure_blow = (
-            pressure_delta is not None and pressure_delta >= self.pressure_blow_threshold_pa
-        )
+        """Combines CO2 trends and pressure spikes to infer embouchure state."""
+        pressure_blow = (pressure_delta is not None and pressure_delta >= self.pressure_blow_threshold_pa)
 
         if co2_pct is None:
             return "No Baseline / Awaiting Capture", "#888888"
@@ -788,8 +729,7 @@ class ScopeWindow(QtWidgets.QWidget):
         if slope <= SLOPE_FALL_THRESH_PCT_S:
             return "Release - Breath Ending", "#9966ff"
 
-        if (co2_pct >= CO2_SUSTAIN_MIN_PCT and std_dev <= LEAK_STD_THRESH_PCT
-                and abs(slope) < SLOPE_STEADY_BAND_PCT_S):
+        if (co2_pct >= CO2_SUSTAIN_MIN_PCT and std_dev <= LEAK_STD_THRESH_PCT and abs(slope) < SLOPE_STEADY_BAND_PCT_S):
             if pressure_blow:
                 return "Sustained Airflow - Good Support", "#33cc33"
             return "Sustained CO2 - No Pressure Confirmation", "#66aa66"
@@ -799,8 +739,9 @@ class ScopeWindow(QtWidgets.QWidget):
 
         return "Transitional", "#aaaaaa"
 
-    # --- Plot refresh ---
+    # --- Plot Rendering ---
     def update_plot(self):
+        """Timer callback that reads from globals and updates all pyqtgraph widgets."""
         if self.paused:
             return
 
@@ -809,23 +750,14 @@ class ScopeWindow(QtWidgets.QWidget):
             pwm_full = rolling_pwm.copy()
             status = latest_status
             buffer_len = len(rolling_volts)
-            t_baro = list(baro_t)
-            temp = list(baro_temp)
-            pressure = list(baro_pressure)
+            t_baro, temp, pressure = list(baro_t), list(baro_temp), list(baro_pressure)
             temperature_now = latest_temp
             current_packet_count = packet_counter
 
-        # Has a genuinely new packet arrived since the last GUI refresh? LED/
-        # Photocurrent history should only advance on real new data -- if it
-        # advanced every timer tick regardless, it would keep scrolling ahead
-        # during a network stall while Temp/Pressure (which only update on a
-        # real packet) sit still, so the two "Time (s)" plot pairs would drift
-        # out of sync and Temp/Pressure would appear to fall behind and vanish
-        # off the right edge of their shared, linked x-axis.
+        # Ensure we only advance optical traces if new UDP data actually arrived
         has_new_packet = current_packet_count != self.last_seen_packet_count
         self.last_seen_packet_count = current_packet_count
 
-        # ---- 10 ms LED on/off average -> photocurrent (clamped) -> optical power ----
         led_on_avg, led_off_avg = self.compute_led_averages(volts_full, pwm_full)
         i_pd_na = self.compute_photocurrent_na(led_on_avg, led_off_avg, temperature_now)
         p_uw = self.photocurrent_to_optical_power_uw(i_pd_na)
@@ -843,14 +775,12 @@ class ScopeWindow(QtWidgets.QWidget):
             self.photocurrent_curve.setData(list(self.led_t), list(self.photocurrent_na))
 
             i_pd_text = f"{i_pd_na:.2f} nA" if i_pd_na is not None else "rejected (>2nA, clamped)"
-            self.led_status_label.setText(
-                f"LED On: {led_on_avg:.4f} V | LED Off: {led_off_avg:.4f} V | Photocurrent: {i_pd_text}"
-            )
+            self.led_status_label.setText(f"LED On: {led_on_avg:.4f} V | LED Off: {led_off_avg:.4f} V | Photocurrent: {i_pd_text}")
 
         if p_uw is not None:
             self.power_smooth_window.append(p_uw)
 
-        # ---- Pressure-based secondary blow detection ----
+        # Handle Pressure Status
         pressure_delta = self.get_pressure_delta_pa()
         if pressure_delta is not None:
             blow_tag = " [BLOW]" if pressure_delta >= self.pressure_blow_threshold_pa else ""
@@ -858,7 +788,7 @@ class ScopeWindow(QtWidgets.QWidget):
         else:
             self.pressure_status_label.setText("Pressure: n/a (capture baseline)")
 
-        # ---- CO2 % (needs a captured baseline) ----
+        # Handle CO2 Computations & Display
         if self.baseline_power_uw is not None and self.power_smooth_window:
             p_smoothed = float(np.mean(self.power_smooth_window))
             co2 = self.compute_co2_percent(p_smoothed)
@@ -872,70 +802,54 @@ class ScopeWindow(QtWidgets.QWidget):
                 self.co2_curve.setData(list(self.co2_t), list(self.co2_pct))
 
                 slope, std_dev = self.compute_slope_and_std()
-                status_text, status_color = self.classify_breath_status(
-                    co2, slope, std_dev, pressure_delta
-                )
+                status_text, status_color = self.classify_breath_status(co2, slope, std_dev, pressure_delta)
 
                 self.co2_digital_label.setText(f"{co2:5.2f} %")
                 self.breath_status_label.setText(status_text)
-                self.breath_status_label.setStyleSheet(
-                    f"background-color: {status_color}; color: white; padding: 6px; border-radius: 6px;"
-                )
+                self.breath_status_label.setStyleSheet(f"background-color: {status_color}; color: white; padding: 6px; border-radius: 6px;")
         else:
             self.co2_digital_label.setText("--.-- %")
 
-        # ---- ADC / PWM trace, with optional triggering ----
+        # Update Scope traces
         if len(volts_full):
             triggered = False
             if self.trigger_enabled:
-                if self.trigger_source == "ADC Voltage":
-                    src_signal = volts_full
-                    level = self.trigger_level
-                else:
-                    src_signal = pwm_full.astype(np.float32)
-                    level = 0.5
-
-                result = find_trigger_window(
-                    src_signal, self.trace_length, level, self.trigger_edge, self.trigger_pretrigger_frac,
-                )
+                src_signal = volts_full if self.trigger_source == "ADC Voltage" else pwm_full.astype(np.float32)
+                level = self.trigger_level if self.trigger_source == "ADC Voltage" else 0.5
+                
+                result = find_trigger_window(src_signal, self.trace_length, level, self.trigger_edge, self.trigger_pretrigger_frac)
                 if result is not None:
                     start, end, trig_idx = result
-                    volts = volts_full[start:end]
-                    pwm = pwm_full[start:end]
+                    volts, pwm = volts_full[start:end], pwm_full[start:end]
                     pretrigger = int(self.trace_length * self.trigger_pretrigger_frac)
                     x = np.arange(-pretrigger, len(volts) - pretrigger, dtype=np.int32)
                     triggered = True
 
             if not triggered:
-                volts = volts_full[-self.trace_length:]
-                pwm = pwm_full[-self.trace_length:]
+                volts, pwm = volts_full[-self.trace_length:], pwm_full[-self.trace_length:]
                 x = np.arange(0, len(volts), dtype=np.int32)
 
             self.adc_curve.setData(x, volts)
             self.pwm_curve.setData(x, pwm.astype(np.float32))
             self.trigger_point_line.setVisible(self.trigger_enabled and triggered)
 
-            self.last_plot_x = x.copy()
-            self.last_plot_y = volts.copy()
-            self.last_plot_pwm = pwm.copy()
+            self.last_plot_x, self.last_plot_y, self.last_plot_pwm = x.copy(), volts.copy(), pwm.copy()
 
+            # Autopan camera if tracking latest point
             if self.follow_latest and not (self.trigger_enabled and triggered):
                 self.adc_plot.setXRange(0, self.trace_length, padding=0)
             elif self.trigger_enabled and triggered:
                 pretrigger = int(self.trace_length * self.trigger_pretrigger_frac)
                 self.adc_plot.setXRange(-pretrigger, self.trace_length - pretrigger, padding=0)
 
-            trig_text = " | TRIGGERED" if (self.trigger_enabled and triggered) else (
-                " | searching for trigger..." if self.trigger_enabled else ""
-            )
+            trig_text = " | TRIGGERED" if (self.trigger_enabled and triggered) else (" | searching for trigger..." if self.trigger_enabled else "")
             self.adc_plot.setTitle(f"{status} | buffer={buffer_len}{trig_text}")
 
+        # Update Barometric visuals
         if t_baro:
             self.temp_curve.setData(t_baro, temp)
-
             if self.baseline_pressure_pa is not None:
-                pressure_rel = [p - self.baseline_pressure_pa for p in pressure]
-                self.pressure_curve.setData(t_baro, pressure_rel)
+                self.pressure_curve.setData(t_baro, [p - self.baseline_pressure_pa for p in pressure])
                 self.pressure_plot.setLabel("left", "Pressure (rel. baseline)", units="Pa")
             else:
                 self.pressure_curve.setData(t_baro, pressure)
@@ -946,7 +860,6 @@ class ScopeWindow(QtWidgets.QWidget):
 
 def main():
     global running
-
     app = QtWidgets.QApplication(sys.argv)
 
     reader = threading.Thread(target=udp_thread, daemon=True)
@@ -962,9 +875,7 @@ def main():
         reader.join(timeout=1)
 
     app.aboutToQuit.connect(cleanup)    
-
     sys.exit(app.exec())
-
 
 if __name__ == "__main__":
     main()
