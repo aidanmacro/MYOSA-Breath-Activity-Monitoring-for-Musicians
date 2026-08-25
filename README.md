@@ -42,7 +42,7 @@ Musicians rely heavily on breath control to shape dynamics, phrasing, tone and e
 ### Videos
 
 <video controls width="100%">
-  <source src="./promovid_compressed.mp4" type="video/mp4">
+  <source src="./breathsense_promovid.mp4" type="video/mp4">
 </video>
 
 
