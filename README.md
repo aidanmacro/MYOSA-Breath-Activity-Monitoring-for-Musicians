@@ -48,7 +48,7 @@ Musicians rely heavily on breath control to shape dynamics, phrasing, tone and e
   - Pressure sensor for additional cross validation data and enhanced insights. 
   - Built on the MYOSA MCU platform, small enough to clip to a belt or pocket, streaming data live
   - On device OLED display for seeing quick analytics 
-  - Python bassed WiFi/IoT system enabling cloud computing for in deapth real time signal processing.
+  - Python based WiFi/IoT system enabling cloud computing for in depth real time signal processing.
 
 
 ## Demo / Examples
@@ -80,7 +80,7 @@ Correct Video Format -->
 <!-- QUICK NOTES:
 - Custom NDIR CO₂ Sensing system, combining a pulsed MWIR LED and a photodiode with a peak sensitivity wavelength corresponding to the peak emitted wavelength of the LED. The CO₂ absorbs some of the emitted IR light and thus can be detected from a drop in signal  from the photodiode. 
 - BMP180 corroborates the breath detection by monitoring the pressure changes within the mouthpiece. It also monitors the temperature changes within the mouthpiece so drift can be accounted for. 
-- A real time capnogram enables the chnages in CO₂ to be plotted and monitored by the user as a proxy for the strenth and consitency of their breath. 
+- A real time capnogram enables the changes in CO₂ to be plotted and monitored by the user as a proxy for the strength and consistency of their breath. 
 - The wireless capabilites of  the MYOSA are leveraged so the data  collected can be sent over WiFi to an external device to be plotted, increasing the ease of use and portability of the device. This also enables data to be logged and stored by the user. 
 
 ACTUAL:  -->
@@ -146,7 +146,7 @@ The final version of the device is envisioned to work like so:
 
 - Attach mouthpiece to wind instrument and place MYOSA in pocket/hook to belt
 - Run accompanying app on phone/computing device
-- Allow hardware a few seconds unplayed to callibrate CO2 background level
+- Allow hardware a few seconds unplayed to calibrate CO2 background level
 - Practise instrument as normal, playing along to sheet music on app
 - Compare breath activity in app in realtime and/or observe collected data at end of piece
 
@@ -161,7 +161,7 @@ The final version of the device is envisioned to work like so:
 | CO₂ detector | P16112-011MA photodiode | Measures transmitted IR intensity after passing through the breath sample |
 | Pressure / temperature | BMP180 (Minkit breakout) | I²C sensor providing an independent breath-pressure signal and temperature compensation |
 | Onboard display | 0.96" OLED Display (Minkit breakout) | I²C enabled, providing on device quick insights for potential offline use|
-| Mechanical | 3D-printed trombone mouthpiece | Directs exhaled breath through the sensing chamber; mounts sensor package in the airflow path (Bassed on Popular Bach 12C Design) |
+| Mechanical | 3D-printed trombone mouthpiece | Directs exhaled breath through the sensing chamber; mounts sensor package in the airflow path (Based on Popular Bach 12C Design) |
 | PCB | Custom board (see `KiCAD/`) | Houses the analog front end and sensor interconnects |
 
 #### Analog Front End
@@ -184,7 +184,7 @@ The CO₂ channel is the most sensitive part of the hardware, since NDIR absorpt
 
 **Desktop application — Python + PyQt**
 - Listens for the incoming data stream from the MYOSA board and parses each frame into CO₂, pressure, and temperature values
-- Does inhanced signal processing and filtering
+- Does enhanced signal processing and filtering
 - Plots all three channels live using PyQt's graphing widgets, updating in real time as the musician plays
 - Buffers session data for post-session review, and (per the Usage Instructions) supports comparing breath activity against sheet music playback
 
