@@ -66,6 +66,8 @@ Correct Video Format -->
   <source src="./Better_Demo_of_CO2_Detection.mp4" type="video/mp4">
 </video>
 
+[Open the video](./Better_Demo_of_CO2_Detection.mp4)
+
 ## Features (Detailed)
 
 <!-- QUICK NOTES:
