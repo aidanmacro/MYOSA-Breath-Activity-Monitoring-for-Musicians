@@ -60,6 +60,11 @@ Musicians rely heavily on breath control to shape dynamics, phrasing, tone and e
   <i>Closeup of MYOSA breakout board.</i>
 </p>
 
+<p align="center">
+  <img src="mouthpiece_on_trombone.jpeg" width="400"><br/>
+  <i>Mouthpiece attached to real instrument.</i>
+</p>
+
 ### Videos
 
 <!-- Participants must: - Upload their video as a local .mp4 file - Place it in the same folder as the markdown file
@@ -80,34 +85,52 @@ Correct Video Format -->
 
 ACTUAL:  -->
 ## 1. NDIR CO₂ Sensing
-  - why co2 as proxy for breath
-  - MWIR wavelength used
-  - pulsed LED
-  - photodiode detection and analog front end 
-  - co2 absorbs part of the optical signal. 
-  - Circuitry 
 
+The primary breath measurement is provided by a custom Non-Dispersive Infrared (NDIR) sensing system. CO₂ absorbs infrared radiation at specific wavelengths, so the concentration of CO₂ in exhaled breath can be inferred from the reduction in transmitted infrared light.
 
-<video controls width="100%">
-  <source src="Better_Demo_of_CO2_Detection.mp4" type="video/mp4">
-</video>
+A mid-wave infrared (MWIR) LED is used as the optical source. The LED is pulsed rather than operated continuously, reducing average power consumption while also allowing the system to distinguish the desired optical signal from ambient infrared radiation and other sources of interference.
 
+The emitted infrared light passes through the mouthpiece and the musician's exhaled breath before reaching a photodiode. As the concentration of CO₂ in the airflow changes, the amount of infrared radiation reaching the photodiode changes accordingly. The photodiode output is converted into a measurable voltage using an analogue front end before being sampled by the MYOSA board.
+
+The system uses synchronous detection to improve the measurement. The photodiode is sampled in synchronisation with the LED pulses, allowing the signal measured when the LED is active to be compared with the background signal when it is inactive. This helps reject ambient infrared light and other sources of background variation.
+
+The resulting CO₂ signal is used as a proxy for breath activity. Rather than attempting to measure the musician's breathing volume directly, the system provides a real-time indication of changes in exhaled CO₂ as the musician plays.
 
 ## 2. Pressure and Temperature Sensing
-  - pressure change provides an independant measure of breath
-  - temperature measurement helps mitigate environmental effects and thermal drift 
-  - BMP180 from minkit connects via I2C to MYOSA board. 
 
-## 3. MYOSA Integration 
-  - Master board circuitry 
-  - Reads sensors and controls the pulsing
-  - Wireless streaming to external computer 
+The optical CO₂ measurement is complemented by pressure and temperature measurements from a BMP180 sensor connected to the MYOSA board over I²C.
 
-## 4. Real-Time Visualisation
-  - Python Desktop interface
-  - PyQt GUI
+Pressure provides an independent measurement of activity within the mouthpiece. Changes in mouthpiece pressure can therefore be compared with the CO₂ signal to help distinguish genuine breath activity from changes or noise in the optical measurement.
 
-## 5. Potential Musical Application
+Temperature is also recorded because the operating environment of the sensor can change during use. Monitoring temperature provides additional information for accounting for environmental variation and thermal drift in the measurements.
+
+Combining the three measurements gives a more informative representation of breath activity than relying on the CO₂ channel alone.
+
+## 3. Real-Time Breath Monitoring
+
+The sensor data is processed into a real-time representation of the musician's breath activity. Changes in the measured CO₂ concentration can be visualised as a capnogram, allowing the user to observe the timing and relative strength of their breath while playing.
+
+The pressure signal provides an additional reference alongside the CO₂ measurement, while temperature data can be used to identify environmental changes and compensate for drift.
+
+This allows breath activity to be observed during actual playing rather than requiring the musician to perform a separate breathing test.
+
+## 4. MYOSA Integration and Wireless Data
+
+The sensing hardware is integrated with the MYOSA development board, which acts as the central controller for the system. The board controls the pulsed LED, reads the analogue CO₂ sensing circuitry, and communicates with the BMP180 over I²C.
+
+The measurements are combined into a timestamped data stream and transmitted wirelessly to an external computer. This separates the sensing hardware from the visualisation system, allowing the musician to carry the relatively small sensing unit while viewing the measurements on a separate device.
+
+Wireless transmission also allows measurements to be logged for later analysis rather than limiting the system to live monitoring.
+
+## 5. Real-Time Visualisation
+
+A Python and PyQt desktop application receives the wireless sensor data and displays the CO₂, pressure and temperature channels in real time.
+
+The application performs additional signal processing and filtering before displaying the measurements, allowing the user to see changes in breath activity as they occur.
+
+Session data can also be buffered for later review, making it possible to compare different playing sessions and examine breath behaviour beyond the immediate live display.
+
+## 6. Potential Musical Application
 
 By capturing quantifiable breath data during real playing, this system opens up several practical applications:
 
