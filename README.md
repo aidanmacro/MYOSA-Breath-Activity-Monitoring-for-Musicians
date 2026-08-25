@@ -1,29 +1,3 @@
-<!-- MYOSA Project Submission Guidelines (For Participants)
-This document outlines the mandatory submission format and rules that all participants must strictly follow while uploading their project to the official MYOSA GitHub repository. Submissions that do not follow this format may be rejected or asked for resubmission.
-1. Submission Format (Mandatory)
-Each participant/team must upload a single Markdown (.md) file following the exact structure below:
----
-publishDate: 2026-08-25
-
-title: BreathSense - MYOSA Musical Breath Activity
-
-excerpt: Short 1–2 line description of your project
-
-This project uses CO2 detection as a proxy for musical activity. Mid-Wave Infrared (MWIR) light at a wavelength absorbed by CO2 is shone through the mouthpiece of a woodwind/brass instrument. 
-
-image: Project_Folder_Name /your-cover-image.jpg
-
-tags:
-  - Tag1
-  - Tag2
-  - Tag3
----
-
-> One-line project tagline 
-Real-time breath monitoring, built for the way musicians breathe and perform.
-
---- -->
-
 ## BreathSense - MYOSA Musical Breath Activity
 
 <p align="center">
@@ -67,23 +41,16 @@ Musicians rely heavily on breath control to shape dynamics, phrasing, tone and e
 
 ### Videos
 
-<!-- Participants must: - Upload their video as a local .mp4 file - Place it in the same folder as the markdown file
+Participants must: - Upload their video as a local .mp4 file - Place it in the same folder as the markdown file
 Correct Video Format -->
-<!-- <video controls width="100%">
+<video controls width="100%">
   <source src="./Better_Demo_of_CO2_Detection.mp4" type="video/mp4">
-</video> -->
+</video>
 
-<video src="./Better_Demo_of_CO2_Detection.mp4" controls width="100%"></video>
 
 ## Features (Detailed)
 
-<!-- QUICK NOTES:
-- Custom NDIR CO₂ Sensing system, combining a pulsed MWIR LED and a photodiode with a peak sensitivity wavelength corresponding to the peak emitted wavelength of the LED. The CO₂ absorbs some of the emitted IR light and thus can be detected from a drop in signal  from the photodiode. 
-- BMP180 corroborates the breath detection by monitoring the pressure changes within the mouthpiece. It also monitors the temperature changes within the mouthpiece so drift can be accounted for. 
-- A real time capnogram enables the changes in CO₂ to be plotted and monitored by the user as a proxy for the strength and consistency of their breath. 
-- The wireless capabilites of  the MYOSA are leveraged so the data  collected can be sent over WiFi to an external device to be plotted, increasing the ease of use and portability of the device. This also enables data to be logged and stored by the user. 
 
-ACTUAL:  -->
 ## 1. NDIR CO₂ Sensing
 
 The primary breath measurement is provided by a custom Non-Dispersive Infrared (NDIR) sensing system. CO₂ absorbs infrared radiation at specific wavelengths, so the concentration of CO₂ in exhaled breath can be inferred from the reduction in transmitted infrared light.
@@ -208,93 +175,6 @@ python3 .\Code\app_code\Breathsense_GUI.py
 | [`KiCAD/`](KiCAD) | PCB schematics and layout for the custom analog front end (NDIR CO₂ sensing circuitry) |
 | [`Mechanical/`](Mechanical) | 3D-printable mouthpiece adapter design (based on a Bach 12C mouthpiece) that houses the sensor package in the airflow path |
 
-<!-- 2. Image Upload Rules
-All images must: - Be placed in the same folder as your .md file - Use JPG or PNG format only - Be properly named (no spaces)
-Correct Image Format
-<p align="center">
-  <img src="assets/images/myosa_breakout.jpg" width="400"><br/>
-  <i>Assembled test breakout board for integrating the MYOSA with external hardware.</i>
-</p>
-3. Video Upload Rules (Important)
-YouTube links are NOT allowed.
-
-4. Content Rules
-Each project must clearly explain: - What the project does - How it works - Who it is for - What problem it solves
-Must Include:
-●	Proper overview
-●	Real images & demo video
-●	Tech stack used
-●	Working instructions -->
-
-<!-- 5. Code & Technical Content
-Participants may include: - Python, C/C++, JavaScript, or Embedded code - Installation commands
-Correct Code Format
-print("Hello MYOSA")
-6. File & Folder Naming Rules
-●	No spaces in file names
-●	Use lowercase
-Good Example:
-myosa-smart-home.md
-myosa-demo.mp4
-myosa-dashboard.jpg
-Bad Example:
-My Project Final.md
-Demo Video.mp4 -->
-<!-- 7. Common Mistakes That Lead to Rejection
-Using YouTube links instead of local videos
-Missing cover image
-Not following the fixed markdown format
-Poor explanation of project
-Missing tech stack
-Wrong file structure
-8. Submission Checklist (Final)
-Before submitting, confirm: 
-●	Markdown file format followed
- Images added correctly
- MP4 video uploaded
- Proper overview written
- Tech stack added
- Commands & code formatted correctly
-9. Submission Responsibility
-By submitting a project, the participant confirms that: - The work is original - The content follows open-source ethics - No copyrighted material is used without permission
-10. Organizer Final Note
-This format is mandatory for all participants. Failure to follow the guidelines may result in: - Rejection of submission - Request for resubmission - Disqualification in case of repeated violation
-Sample Format:
----
-publishDate: YYYY-MM-DDT00:00:00Z
-title: Your Project Title
-excerpt: A short 1–2 sentence summary describing what the project does.
-image: your-cover-image.jpg    # optional but recommended
-tags:
-  - tag1
-  - tag2
-  - tag3
----
-> A short tagline that summarizes the project in one sentence.
---- -->
-<!-- ## Features (Detailed)
-Explain in detail how the project works.  
-Break it into clear subsections like below.
-### **1. Feature Heading Example**
-Explain the feature.
-### **2. Feature Heading Example**
-Explain the feature.
-### **3. Feature Heading Example**
-Explain the feature.
-Add images or videos under each subsection if needed using the formats above.
----
-## Usage Instructions
-Explain how others can use this project.
-If there are commands, show them like this:
-```plaintext
-python your_script.py --option value
-```
-If there are scripts, use:
-```python
-# Example Python snippet
-def example():
-    print("Hello World")
-``` -->
 ## License MIT License
 
 Copyright (c) 2026 aidanmacro
