@@ -27,7 +27,7 @@ Real-time breath monitoring, built for the way musicians breathe and perform.
 ## BreathSense - MYOSA Musical Breath Activity
 
 <p align="center">
-  <img src="/assets/images/myosa_breakout.jpg" width="400"><br/>
+  <img src="myosa_breakout.jpg" width="400"><br/>
   <i>Placeholder cover image</i>
 </p>
 
@@ -54,7 +54,7 @@ Musicians rely heavily on breath control to shape dynamics, phrasing, tone and e
 ### Images
 
 <p align="center">
-  <img src="assets/images/myosa_breakout.jpg" width="400"><br/>
+  <img src="myosa_breakout.jpg" width="400"><br/>
   <i>Placeholder cover image</i>
 </p>
 
@@ -63,7 +63,7 @@ Musicians rely heavily on breath control to shape dynamics, phrasing, tone and e
 <!-- Participants must: - Upload their video as a local .mp4 file - Place it in the same folder as the markdown file
 Correct Video Format -->
 <video controls width="100%">
-  <source src="/your-video-name.mp4" type="video/mp4">
+  <source src="Better_Demo_of_CO2_Detection.mp4" type="video/mp4">
 </video>
 
 ## Features (Detailed)
@@ -85,7 +85,7 @@ ACTUAL:  -->
 
 
 <video controls width="100%">
-  <source src="assets/videos/Better_Demo_of_CO2_Detection.mp4" type="video/mp4">
+  <source src="Better_Demo_of_CO2_Detection.mp4" type="video/mp4">
 </video>
 
 
