@@ -109,7 +109,13 @@ ACTUAL:  -->
 
 ## Usage Instructions
 
-Just honk
+The final version of the device is envisioned to work like so:
+
+- Attach mouthpiece to wind instrument and place MYOSA in pocket/hook to belt
+- Run accompanying app on phone/computing device
+- Allow hardware a few seconds unplayed to callibrate CO2 background level
+- Practise instrument as normal, playing along to sheet music on app
+- Compare breath activity in app in realtime and/or observe collected data at end of piece
 
 ## Tech Stack
 
