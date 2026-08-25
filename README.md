@@ -64,11 +64,11 @@ Musicians rely heavily on breath control to shape dynamics, phrasing, tone and e
 
 <!-- Participants must: - Upload their video as a local .mp4 file - Place it in the same folder as the markdown file
 Correct Video Format -->
-<video controls width="100%">
+<!-- <video controls width="100%">
   <source src="./Better_Demo_of_CO2_Detection.mp4" type="video/mp4">
-</video>
+</video> -->
 
-[Open the video](./Better_Demo_of_CO2_Detection.mp4)
+<video src="./Better_Demo_of_CO2_Detection.mp4" controls width="100%"></video>
 
 ## Features (Detailed)
 
@@ -111,7 +111,13 @@ ACTUAL:  -->
 
 ## Usage Instructions
 
-Just honk
+The final version of the device is envisioned to work like so:
+
+- Attach mouthpiece to wind instrument and place MYOSA in pocket/hook to belt
+- Run accompanying app on phone/computing device
+- Allow hardware a few seconds unplayed to callibrate CO2 background level
+- Practise instrument as normal, playing along to sheet music on app
+- Compare breath activity in app in realtime and/or observe collected data at end of piece
 
 ## Tech Stack
 
