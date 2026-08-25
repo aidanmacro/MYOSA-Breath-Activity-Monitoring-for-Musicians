@@ -111,10 +111,12 @@ ACTUAL:  -->
 
 By capturing quantifiable breath data during real playing, this system opens up several practical applications:
 
-- **Practice feedback** — musicians can see how their breath support and timing align with phrasing, dynamics, and endurance across a piece, rather than relying on subjective feel alone.
-- **Teaching aid** — instructors can use recorded breath data to give concrete, visual feedback on breath control technique, rather than description alone.
-- **Endurance and consistency tracking** — repeated sessions can be compared over time to track improvements in breath efficiency or stamina for demanding passages.
-- **Research** — objective breath-activity data across players/instruments could support studies into breath technique and fatigue in wind and brass performance.
+- **Practice feedback** musicians can see how their breath support and timing align with phrasing, dynamics, and endurance across a piece, rather than relying on subjective feel alone.
+- **Teaching aid** instructors can use recorded breath data to give concrete, visual feedback on breath control technique, rather than description alone.
+- **Endurance and consistency tracking** repeated sessions can be compared over time to track improvements in breath efficiency or stamina for demanding passages.
+- **Research** objective breath-activity data across players/instruments could support studies into breath technique and fatigue in wind and brass performance.
+
+
 ## Usage Instructions
 
 The final version of the device is envisioned to work like so:
